@@ -11,8 +11,8 @@ if(NOT WIN32)
 endif()
 
 set(LIBZIP_INCLUDE_DIR "${LIBZIP_HOME}/lib;${LIBZIP_HOME}/build" CACHE PATH "Path to libzip include folder.")
-set(LIBZIP_LIBRARY_RELEASE "../${LIBZIP_HOME}/build/lib/Release/zip" CACHE FILEPATH "Path to libzip release library.")
-set(LIBZIP_LIBRARY_DEBUG "../${LIBZIP_HOME}/build/lib/Debug/zip" CACHE FILEPATH "Path to libzip debug library.")
+set(LIBZIP_LIBRARY_RELEASE "libzippp_static")
+set(LIBZIP_LIBRARY_DEBUG "libzippp_static")
 
 FIND_PACKAGE(ZLIB REQUIRED)
 INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
@@ -25,15 +25,21 @@ INCLUDE_DIRECTORIES(${LIBZIP_INCLUDE_DIR})
 set(CMAKE_REQUIRED_INCLUDES ${LIBZIP_INCLUDE_DIR})
 
 add_definitions(-DLIBZIPPP_EXPORTS)
-ADD_LIBRARY(libzippp_shared SHARED "src/libzippp.cpp")
-SET_TARGET_PROPERTIES(libzippp_shared PROPERTIES OUTPUT_NAME libzippp)
-TARGET_LINK_LIBRARIES(libzippp_shared 
-			debug ${LIBZIP_LIBRARY_DEBUG}
-			optimized ${LIBZIP_LIBRARY_RELEASE}
-			${ZLIB_LIBRARY})
 
-ADD_LIBRARY(libzippp_static STATIC "src/libzippp.cpp")
+IF(BUILD_SHARED_LIBS)
+	ADD_LIBRARY(libzippp_shared SHARED "src/libzippp.cpp")
+	SET_TARGET_PROPERTIES(libzippp_shared PROPERTIES OUTPUT_NAME libzippp)
+	TARGET_LINK_LIBRARIES(libzippp_shared 
+				debug ${LIBZIP_LIBRARY_DEBUG}
+				optimized ${LIBZIP_LIBRARY_RELEASE}
+				${ZLIB_LIBRARY})
+ELSE()
+	ADD_LIBRARY(libzippp_static STATIC "src/libzippp.cpp")
+endif()
 
+OPTION(ENABLE_LIBZIPP_EXAMPLES "Enable use of examples" OFF)
+
+if(ENABLE_LIBZIPP_EXAMPLES)
 ADD_EXECUTABLE(libzippp_shared_test "tests/tests.cpp")
 TARGET_LINK_LIBRARIES(libzippp_shared_test libzippp_shared)
 
@@ -46,3 +52,4 @@ TARGET_LINK_LIBRARIES(libzippp_static_test
                         optimized ${LIBZIP_LIBRARY_RELEASE}
                         debug ${ZLIB_LIBRARY_DEBUG}
                         optimized ${ZLIB_LIBRARY_RELEASE})
+endif()
