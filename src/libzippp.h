@@ -1,6 +1,6 @@
 
 #ifndef LIBZIPPP_H
-#define	LIBZIPPP_H
+#define LIBZIPPP_H
 
 /*
   libzippp.h -- exported declarations.
@@ -42,6 +42,7 @@
 
 //defined in libzip
 struct zip;
+struct zip_source;
 
 #define ENTRY_PATH_SEPARATOR '/'
 #define ENTRY_IS_DIRECTORY(str) ((str).length()>0 && (str)[(str).length()-1]==ENTRY_PATH_SEPARATOR)
@@ -51,31 +52,28 @@ struct zip;
 //- http://www.nih.at/libzip/libzip.html
 //- http://slash.developpez.com/tutoriels/c/utilisation-libzip/
 
-//standard unsigned int
-typedef unsigned int uint;
-
 #ifdef WIN32
         typedef long long libzippp_int64;
         typedef unsigned long long libzippp_uint64;
         typedef unsigned short libzippp_uint16;
         //special declarations for windows to use libzippp from a DLL
-        #define SHARED_LIBRARY_EXPORT __declspec(dllexport)
-        #define SHARED_LIBRARY_IMPORT
+        #define LIBZIPPP_SHARED_LIBRARY_EXPORT __declspec(dllexport)
+        #define LIBZIPPP_SHARED_LIBRARY_IMPORT
 #else
         //standard ISO c++ does not support long long
         typedef long int libzippp_int64;
         typedef unsigned long int libzippp_uint64;
         typedef unsigned short libzippp_uint16;
         
-        #define SHARED_LIBRARY_EXPORT
-        #define SHARED_LIBRARY_IMPORT
+        #define LIBZIPPP_SHARED_LIBRARY_EXPORT
+        #define LIBZIPPP_SHARED_LIBRARY_IMPORT
 #endif
 
 #ifdef LIBZIPPP_EXPORTS
         #define LIBZIPPP_INTERNAL
-        #define LIBZIPPP_API SHARED_LIBRARY_EXPORT
+        #define LIBZIPPP_API LIBZIPPP_SHARED_LIBRARY_EXPORT
 #else
-        #define LIBZIPPP_API SHARED_LIBRARY_IMPORT
+        #define LIBZIPPP_API LIBZIPPP_SHARED_LIBRARY_IMPORT
 #endif
 
 // special return code for libzippp
@@ -136,6 +134,13 @@ namespace libzippp {
         virtual ~ZipArchive(void); //commit all the changes if open
         
         /**
+         * Creates a new ZipArchive from the specified buffer. The archive will
+         * directly be open with the given mode. If the archive fails to be open or
+         * if the consistency check fails, this method will return null.
+         */
+        static ZipArchive* fromBuffer(const char* buffer, uint32_t size, OpenMode mode=READ_ONLY, bool checkConsistency=false);
+        
+        /**
          * Return the path of the ZipArchive.
          */
         std::string getPath(void) const { return path; }
@@ -147,7 +152,7 @@ namespace libzippp {
          * mode is the same.
          */
         bool open(OpenMode mode=READ_ONLY, bool checkConsistency=false);
-        
+
         /**
          * Closes the ZipArchive and releases all the resources held by it. If the ZipArchive was
          * not open previously, this method does nothing. If the archive was open in modification
@@ -296,7 +301,7 @@ namespace libzippp {
          * If the provided chunk size is zero, it will be defaulted to DEFAULT_CHUNK_SIZE (512KB).
          * The method doesn't close the ofstream after the extraction.
          */
-        int readEntry(const ZipEntry& zipEntry, std::ofstream& ofOutput, State state=CURRENT, libzippp_uint64 chunksize=DEFAULT_CHUNK_SIZE) const;
+        int readEntry(const ZipEntry& zipEntry, std::ostream& ofOutput, State state=CURRENT, libzippp_uint64 chunksize=DEFAULT_CHUNK_SIZE) const;
 
         /**
          * Deletes the specified entry from the zip file. If the entry is a folder, all its
@@ -380,8 +385,12 @@ namespace libzippp {
     private:
         std::string path;
         zip* zipHandle;
+        zip_source* zipSource;
         OpenMode mode;
         std::string password;
+        
+        //open from a buffer
+        bool openBuffer(const char* buffer, uint32_t sz, OpenMode mode=READ_ONLY, bool checkConsistency=false);
         
         //generic method to create ZipEntry
         ZipEntry createEntry(struct zip_stat* stat) const;
@@ -506,7 +515,7 @@ namespace libzippp {
          * If the provided chunk size is zero, it will be defaulted to DEFAULT_CHUNK_SIZE (512KB).
          * The method doesn't close the ofstream after the extraction.
          */
-        int readContent(std::ofstream& ofOutput, ZipArchive::State state=ZipArchive::CURRENT, libzippp_uint64 chunksize=DEFAULT_CHUNK_SIZE) const;
+        int readContent(std::ostream& ofOutput, ZipArchive::State state=ZipArchive::CURRENT, libzippp_uint64 chunksize=DEFAULT_CHUNK_SIZE) const;
         
     private:
         const ZipArchive* zipFile;
